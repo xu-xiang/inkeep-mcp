@@ -1,36 +1,33 @@
-# 📚 Inkeep MCP: AI 开发者的文档“外挂”
+# 🔓 Inkeep MCP: 通用文档 AI 桥接器
 
 [English](README.md) | [中文](README_zh.md)
 
-> **将任何技术文档网站转化为 AI Agent 的智能知识库。让你的 Gemini/Claude 直接阅读 Langfuse、Render、Clerk 等主流产品的最新官方文档。**
+> **解锁任意 Inkeep 文档站点的 "Ask AI" 能力。让你的 Gemini/Claude 直接连接 Langfuse、Render 等无数产品的官方知识库。**
 
 [![MCP Compliant](https://img.shields.io/badge/MCP-Compliant-blue)](https://modelcontextprotocol.io/)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-green)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**Inkeep MCP** 是一个基于 **Model Context Protocol (MCP)** 的通用连接器。它在你的本地 AI 工具（Gemini CLI, Claude Desktop）与现代文档网站强大的 AI 搜索功能之间架起了一座桥梁。
+
+它通过模拟浏览器的访问行为，允许你查询 **任何** 集成了 Inkeep 的网站，无需申请 API Key，也无需人工配置。
+
 ---
 
-## 🧐 背景与痛点
+## 🧐 为什么需要它？
 
-### 什么是 Inkeep？
-[Inkeep](https://inkeep.com) 是目前全球最流行的**技术文档 AI 搜索服务**。许多你耳熟能详的技术产品——**Langfuse, Render, Clerk, Neon, PlanetScale, PostHog**——都在使用 Inkeep 来驱动它们官网右下角的 "Ask AI" 功能。因为它专门针对技术文档、API Reference 进行了优化，回答准确率极高，深受开发者喜爱。
+### 问题：知识被锁在浏览器里
+Langfuse, Render, Neon 等顶尖开发工具都使用 [Inkeep](https://inkeep.com) 来提供极高质量的 AI 问答。但这些能力被锁在官网的 UI 组件里。
+*   **开发者**必须离开终端去网页搜索。
+*   **AI Agent** 无法通过编程方式访问这些最新的、官方验证过的知识。
 
-### 我们遇到了什么问题？
-虽然 Inkeep 很好用，但它**被“困”在了浏览器里**：
-1.  **开发者的割裂感**：当你在终端或 IDE 里写代码报错时，你必须切出 IDE -> 打开浏览器 -> 搜官网 -> 点 Ask AI -> 问问题 -> 把代码复制回来。这打断了心流。
-2.  **AI Agent 的无知**：你的 Gemini/Claude/Cursor 很聪明，但它们的训练数据是滞后的。它们不知道 Langfuse 昨天刚发布的 `v3` SDK 怎么用。更糟糕的是，它们无法通过标准方式去“使用”官网那个需要复杂的 JS 渲染和前端交互的 "Ask AI" 组件。
+### 方案：通用桥接器
+本工具旨在“解放”这些知识。它作为一个通用适配器：
+1.  **扫描**：自动分析目标网站（任意支持的网站）的前端代码，提取 Inkeep 配置。
+2.  **连接**：使用该网站公开的访客身份进行连接（模拟正常访问）。
+3.  **流式传输**：将官方的高质量问答实时转发给你的 CLI 或 Agent。
 
-## 💡 我们的解决方案
-
-**Inkeep MCP** 是一个基于 **Model Context Protocol (MCP)** 的桥梁工具。
-
-它通过**协议分析**和**自动化封装技术**，将任意集成了 Inkeep 的文档网站，转化为一个标准的、可被 AI 调用的 **工具函数 (Tool)**。
-
-### 核心价值
-*   ✅ **赋予 AI "实时"阅读能力**：让你的 Agent 直接查询最新的官方文档，不再瞎编过时的 API。
-*   ✅ **智能自愈系统**：内置自动重试与配置刷新机制。如果目标网站更新了 API Key，工具会自动检测并重新提取，全程无需人工干预。
-*   ✅ **零配置黑科技**：无需申请 API Key。本项目实现了**智能前端扫描**，自动从文档网页中提取配置信息，并内置了 **PoW (工作量证明) 求解器** 来合规通过服务验证。
-*   ✅ **开发流闭环**：直接在 Gemini CLI 或 Claude Desktop 中问 "Render 怎么部署 Docker？"，答案即刻呈现，无需离开当前工作流。
+**结果**：你的 AI Agent 瞬间获得了阅读任意 Inkeep 驱动文档的能力。
 
 ---
 
@@ -70,7 +67,9 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 
 这是本项目的核心玩法。配置后，你的 AI 助手将获得“查阅文档”的技能。
 
-### Gemini CLI 配置 (`~/.gemini/config.json`)
+### Gemini CLI
+
+修改配置文件 `~/.gemini/config.json`:
 
 ```json
 {
@@ -84,7 +83,7 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 }
 ```
 
-### Claude Desktop 配置
+### Claude Desktop
 
 修改配置文件 `~/Library/Application Support/Claude/claude_desktop_config.json`:
 

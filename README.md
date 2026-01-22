@@ -1,32 +1,35 @@
-# 📚 Inkeep MCP: The AI Librarian for Technical Docs
+# 🔓 Inkeep MCP: Universal Documentation Bridge
 
 [English](README.md) | [中文](README_zh.md)
 
-> **Turn any documentation site into an intelligent knowledge base for your AI Agent. Let Gemini/Claude read the latest official docs from Langfuse, Render, Clerk, and more.**
+> **Unlock the "Ask AI" capability from ANY Inkeep-powered documentation site. Connect your local AI Agent directly to the official docs of Langfuse, Render, Clerk, and countless others.**
 
 [![MCP Compliant](https://img.shields.io/badge/MCP-Compliant-blue)](https://modelcontextprotocol.io/)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-green)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**Inkeep MCP** is a universal connector built on the **Model Context Protocol (MCP)**. It bridges the gap between your local AI tools (Gemini CLI, Claude Desktop) and the wealth of knowledge hidden behind the "Ask AI" buttons on modern documentation sites.
+
+It simulates a browser to access Inkeep's services, allowing you to query **any** supported site without needing official API keys or manual configuration.
+
 ---
 
-## 🧐 Background & Pain Points
+## 🧐 The "Why"
 
-### What is Inkeep?
-[Inkeep](https://inkeep.com) is the world's most popular **AI search service for technical documentation**. Many products you use daily—**Langfuse, Render, Clerk, Neon, PlanetScale, PostHog**—use Inkeep to power their "Ask AI" components. It's highly optimized for API references and technical guides, delivering exceptional accuracy.
+### The Problem: Locked Knowledge
+Top-tier dev tools (Langfuse, Render, Neon...) use [Inkeep](https://inkeep.com) to power their excellent AI search. But this capability is locked inside their browser widgets.
+*   **Developers** have to leave their terminal to search.
+*   **AI Agents** (Gemini/Claude) can't access this high-quality, up-to-date knowledge base programmatically.
 
-### The Problem
-Despite being powerful, Inkeep is often **"trapped" in the browser**:
-1.  **Developer Friction**: When coding in your terminal or IDE, you have to switch to a browser, find the site, click "Ask AI", and copy-paste code back. This breaks your "deep work" flow.
-2.  **AI Agent Ignorance**: Your Gemini/Claude/Cursor is smart, but its training data is stale. It doesn't know about the `v3` SDK released yesterday. Even worse, it can't "use" the website's AI component due to complex JS rendering and security challenges.
+### The Solution: A Universal Bridge
+This tool "liberates" that knowledge. It acts as a universal adapter that:
+1.  **Scans** the target website (any website!) for Inkeep configuration.
+2.  **Connects** using the site's own public credentials (simulating a visitor).
+3.  **Streams** the answers back to your CLI or Agent.
 
-## 💡 Our Solution
+**Result**: Your AI Agent gains the ability to "read" the official docs of any product that uses Inkeep.
 
-**Inkeep MCP** is a bridge built on the **Model Context Protocol (MCP)**.
-
-It uses **protocol analysis** and **automated encapsulation** to transform any Inkeep-integrated documentation site into a standard, AI-callable **Tool**.
-
-### Core Value
+---
 *   ✅ **Real-time Reading**: Empowers your Agent to query the latest official docs. No more hallucinating outdated APIs.
 *   ✅ **Self-Healing System**: Built-in auto-retry and config refresh. If a site updates its API Key, the tool automatically detects and re-extracts it—zero manual intervention.
 *   ✅ **Zero-Config**: No API Key registration required. It implements **intelligent frontend scanning** to extract configurations and includes a **PoW (Proof of Work) solver** to pass service verification legitimately.
