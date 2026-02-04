@@ -149,7 +149,7 @@ def update_readmes():
             md_content = "\n".join(md_lines)
             with open(readme_file, 'r') as f: text = f.read()
             pattern = r"(<!-- AUTO-GENERATED-SITES:START -->)(.*?)(<!-- AUTO-GENERATED-SITES:END -->)"
-            replacement = f"\1\n{md_content}\n\3"
+            replacement = f"\\1\n{md_content}\n\\3"
             new_text = re.sub(pattern, replacement, text, flags=re.DOTALL)
             with open(readme_file, 'w') as f: f.write(new_text)
             print(f"📝 Updated {readme_file}", flush=True)
