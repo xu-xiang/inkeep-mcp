@@ -4,6 +4,8 @@ import json
 import time
 import requests
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
 from pathlib import Path
 
@@ -16,6 +18,10 @@ from inkeep_core.client import InkeepClient
 
 GITHUB_TOKEN = os.environ.get("MINER_TOKEN") or os.environ.get("GITHUB_TOKEN")
 STATE_FILE = Path("github_miner/state.json")
+MAX_RUNTIME_SECONDS = 45 * 60 
+
+# 用于保护文件写入的锁
+registry_lock = threading.Lock()
 
 def load_state():
     if STATE_FILE.exists():
@@ -37,7 +43,6 @@ def check_rate_limit(res):
         limit = int(res.headers.get("x-ratelimit-limit", 30))
         reset_time = int(res.headers.get("x-ratelimit-reset", time.time() + 60))
         buffer = max(3, int(limit * 0.1))
-        
         if remaining <= buffer:
             sleep_seconds = reset_time - time.time() + 5
             print(f"⚠️ Rate limit low ({remaining}/{limit}). Sleeping for {sleep_seconds:.0f}s...", flush=True)
@@ -47,7 +52,6 @@ def check_rate_limit(res):
 def search_github(state):
     max_stars = state["max_stars"]
     gradient = state.get("last_gradient", 1000)
-    
     if max_stars < 10:
         print("Stars floor reached.", flush=True)
         return [], 500000, 1000
@@ -69,105 +73,119 @@ def search_github(state):
 
     try:
         res = requests.get(url, headers=headers, params=params, timeout=15)
-        
         if res.status_code == 422:
-            print(f"❌ API Error 422: Invalid Query. {res.text}", flush=True)
+            print(f"❌ API Error 422: Invalid Query.", flush=True)
             return [], max_stars - gradient, gradient
-
         if res.status_code in [403, 429]:
-            print(f"⚠️ Rate limit hit (Status {res.status_code})", flush=True)
             check_rate_limit(res)
             return search_github(state) 
-            
         if res.status_code != 200:
-            print(f"❌ API Error {res.status_code}: {res.text}", flush=True)
+            print(f"❌ API Error {res.status_code}", flush=True)
             return [], max_stars, gradient
 
         check_rate_limit(res)
-        
         items = res.json().get("items", [])
-        
         if not items:
-            print(f"   No items in range. Increasing gradient.", flush=True)
-            new_gradient = gradient * 2
-            return [], max_stars - gradient, new_gradient
+            return [], max_stars - gradient, gradient * 2
             
-        first = items[0]["stargazers_count"]
-        last = items[-1]["stargazers_count"]
-        count = len(items)
-        print(f"   Result: Count={count}, Top={first}, Bottom={last}", flush=True)
+        first, last = items[0]["stargazers_count"], items[-1]["stargazers_count"]
+        print(f"   Result: Count={len(items)}, Top={first}, Bottom={last}", flush=True)
         
         next_max = last
-        if next_max == max_stars: 
-            next_max -= 1
-            
-        if count < 100:
+        if next_max == max_stars: next_max -= 1
+        
+        if len(items) < 100:
             next_gradient = int(gradient * 1.5)
-            print(f"   -> Sparse batch (<100). Increasing gradient to {next_gradient}", flush=True)
         else:
-            actual_spread = first - last
-            next_gradient = max(100, actual_spread)
-            print(f"   -> Full batch. Adjusting gradient to actual spread: {next_gradient}", flush=True)
+            next_gradient = max(100, first - last)
 
         return items, next_max, next_gradient
-
     except Exception as e:
         print(f"❌ Exception: {e}", flush=True)
         return [], max_stars, gradient
 
 def verify_site_chat(url):
-    print(f"   Verifying chat for {url} ...", end="", flush=True)
     try:
         client = InkeepClient(url)
         for chunk in client.ask("Hello"):
-            if "[Error]" in chunk:
-                print(f" ❌ Failed: {chunk}", flush=True); return False
-            print(" ✅ OK", flush=True); return True
-    except Exception as e:
-        print(f" ❌ Exception: {e}", flush=True); return False
+            if "[Error]" in chunk: return False
+            return True
+    except: return False
     return False
 
 def update_registry_file(new_site):
-    file_path = Path("inkeep_core/registry.py")
-    with open(file_path, 'r') as f: content = f.read()
-    alias, url, desc = new_site['alias'], new_site['url'], new_site['desc']
-    if f'"{alias}"' in content: return
-    tag = "} # END_DEFAULT_SITES"
-    tag_index = content.find(tag)
-    if tag_index != -1:
-        prefix = content[:tag_index].rstrip()
-        suffix = content[tag_index:]
-        if not prefix.endswith(","): prefix += ","
-        entry = f'\n    \"{alias}\": {{ \n        \"url\": \"{url}\",\n        \"description\": \"{desc}\"\n    }}'
-        with open(file_path, 'w') as f: f.write(prefix + entry + "\n" + suffix)
-        print(f"🎉 Code Updated: Added {alias}", flush=True)
-    else:
-        print("❌ Failed to patch registry.py - Tag not found", flush=True)
+    with registry_lock: # 加锁保护文件写入
+        file_path = Path("inkeep_core/registry.py")
+        with open(file_path, 'r') as f: content = f.read()
+        alias, url, desc = new_site['alias'], new_site['url'], new_site['desc']
+        if f'"{alias}"' in content: return
+        tag = "} # END_DEFAULT_SITES"
+        tag_index = content.find(tag)
+        if tag_index != -1:
+            prefix = content[:tag_index].rstrip()
+            suffix = content[tag_index:]
+            if not prefix.endswith(","): prefix += ","
+            entry = f'\n    "{alias}": {{\n        "url": "{url}",\n        "description": "{desc}"\n    }}'
+            with open(file_path, 'w') as f: f.write(prefix + entry + "\n" + suffix)
+            print(f"🎉 Code Updated: Added {alias}", flush=True)
 
 def update_readmes():
-    import importlib
-    import inkeep_core.registry
-    importlib.reload(inkeep_core.registry)
-    sites = inkeep_core.registry.DEFAULT_SITES
-    for readme_file in ["README.md", "README_zh.md"]:
-        if not os.path.exists(readme_file): continue
-        is_zh = "zh" in readme_file
-        md_lines = []
-        for alias, info in sites.items():
-            name = alias.capitalize()
-            desc = info['description']
-            if is_zh and desc.startswith("Docs for "):
-                desc = desc.replace("Docs for ", "") + " 官方文档"
-            elif is_zh and desc.startswith("Official docs for "):
-                desc = desc.replace("Official docs for ", "") + " 官方文档"
-            md_lines.append(f"*   **{name}** ({desc})")
-        md_content = "\n".join(md_lines)
-        with open(readme_file, 'r') as f: text = f.read()
-        pattern = r"(<!-- AUTO-GENERATED-SITES:START -->)(.*?)(<!-- AUTO-GENERATED-SITES:END -->)"
-        replacement = f"\\1\n{md_content}\n\\3"
-        new_text = re.sub(pattern, replacement, text, flags=re.DOTALL)
-        with open(readme_file, 'w') as f: f.write(new_text)
-        print(f"📝 Updated {readme_file}", flush=True)
+    with registry_lock: # 加锁保护文档更新
+        import importlib
+        import inkeep_core.registry
+        importlib.reload(inkeep_core.registry)
+        sites = inkeep_core.registry.DEFAULT_SITES
+        for readme_file in ["README.md", "README_zh.md"]:
+            if not os.path.exists(readme_file): continue
+            is_zh = "zh" in readme_file
+            md_lines = []
+            for alias, info in sites.items():
+                name = alias.capitalize()
+                desc = info['description']
+                if is_zh and (desc.startswith("Docs for ") or desc.startswith("Official docs for ")):
+                    desc = desc.replace("Docs for ", "").replace("Official docs for ", "") + " 官方文档"
+                md_lines.append(f"*   **{name}** ({desc})")
+            
+            md_content = "\n".join(md_lines)
+            with open(readme_file, 'r') as f: text = f.read()
+            pattern = r"(<!-- AUTO-GENERATED-SITES:START -->)(.*?)(<!-- AUTO-GENERATED-SITES:END -->)"
+            replacement = f"\1\n{md_content}\n\3"
+            new_text = re.sub(pattern, replacement, text, flags=re.DOTALL)
+            with open(readme_file, 'w') as f: f.write(new_text)
+            print(f"📝 Updated {readme_file}", flush=True)
+
+def scan_repo(repo, scanned_set):
+    """单个仓库的扫描逻辑，供线程池调用"""
+    homepage = repo.get("homepage")
+    if not homepage or not homepage.startswith("http"): return None
+    
+    domain = urlparse(homepage).netloc
+    if not domain or domain in scanned_set: return None
+    
+    extractor = ConfigExtractor()
+    targets = [homepage.rstrip("/"), f"{homepage.rstrip('/')}/docs", f"https://docs.{domain}"]
+    targets = list(dict.fromkeys(targets))
+    
+    found_url = None
+    for url in targets:
+        if extractor.scan(url):
+            found_url = url
+            break
+    
+    if found_url:
+        print(f"Checking {domain} ... 🔍 FOUND CONFIG! Verifying...", flush=True)
+        if verify_site_chat(found_url):
+            print(f"   {domain} ✅ VERIFIED", flush=True)
+            alias = repo['name'].lower().replace('.', '-').replace('_', '-')
+            desc = (repo.get('description') or f"Docs for {repo['name']}")[:60].replace('"', '\\"').replace('\n', ' ')
+            return {"alias": alias, "url": found_url, "desc": desc, "domain": domain}
+        else:
+            print(f"   {domain} ⚠️ Verification Failed", flush=True)
+    else:
+        # 即使没找到，也记录域名已扫描
+        pass
+        
+    return {"domain": domain, "found": False}
 
 def main():
     if not GITHUB_TOKEN: print("❌ GITHUB_TOKEN not set"); sys.exit(1)
@@ -175,74 +193,46 @@ def main():
     start_time = time.time()
     state = load_state()
     scanned = set(state["scanned_domains"])
-    extractor = ConfigExtractor()
     
-    MAX_RUNTIME_SECONDS = 45 * 60 
-    
-    print(f"🚀 Starting continuous mining session (Max {MAX_RUNTIME_SECONDS}s)...", flush=True)
-    
-    total_findings = 0
+    print(f"🚀 Starting Miner (Max {MAX_RUNTIME_SECONDS}s, Concurrency 10)...", flush=True)
+    total_new = 0
     
     while True:
-        elapsed = time.time() - start_time
-        if elapsed > MAX_RUNTIME_SECONDS:
-            print(f"⏰ Time limit reached. Stopping.", flush=True)
-            break
+        if time.time() - start_time > MAX_RUNTIME_SECONDS:
+            print("⏰ Time limit reached.", flush=True); break
             
         repos, next_max, next_grad = search_github(state)
-        
         state["max_stars"] = next_max
         state["last_gradient"] = next_grad
         
         if not repos:
-             if state["max_stars"] < 50:
-                 state["max_stars"] = 500000 
-                 print("Resetting to top.", flush=True)
-             else:
-                 pass
-        
-        batch_findings = 0
-        for repo in repos:
-            if time.time() - start_time > MAX_RUNTIME_SECONDS: break
+            if state["max_stars"] < 50: 
+                state["max_stars"] = 500000
+                break
+            continue
+
+        batch_new = 0
+        # 使用线程池并发扫描网站
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_repo = {executor.submit(scan_repo, repo, scanned): repo for repo in repos}
             
-            homepage = repo.get("homepage")
-            # Local filter
-            if not homepage or not homepage.startswith("http"): continue
-            
-            domain = urlparse(homepage).netloc
-            if not domain or domain in scanned: continue
-            
-            print(f"Checking {domain} ...", end=" ", flush=True)
-            
-            targets = [homepage.rstrip("/"), f"{homepage.rstrip('/')}/docs", f"https://docs.{domain}"]
-            targets = list(dict.fromkeys(targets))
-            
-            found_url = None
-            for url in targets:
-                if extractor.scan(url):
-                    found_url = url
-                    break
-            
-            if found_url:
-                print(f"🔍 FOUND CONFIG!", flush=True)
-                if verify_site_chat(found_url):
-                    alias = repo['name'].lower().replace('.', '-').replace('_', '-')
-                    desc = (repo.get('description') or f"Docs for {repo['name']}")[:60].replace('"', '\\"').replace('\n', ' ')
-                    update_registry_file({"alias": alias, "url": found_url, "desc": desc})
-                    batch_findings += 1; total_findings += 1; state["found_sites"].append(found_url)
-                else: print("⚠️ Verification Failed", flush=True)
-            else:
-                print("⚪ Nope", flush=True)
-            
-            scanned.add(domain)
-            time.sleep(0.5) # Polite delay
-        
+            for future in as_completed(future_to_repo):
+                result = future.result()
+                if result:
+                    scanned.add(result["domain"])
+                    if "alias" in result:
+                        update_registry_file(result)
+                        batch_new += 1
+                        total_new += 1
+                        state["found_sites"].append(result["url"])
+
         state["scanned_domains"] = list(scanned)
         save_state(state)
+        if batch_new > 0: update_readmes()
         
-        if batch_findings > 0: update_readmes()
-            
-    print(f"\n🏁 Session Complete. New sites: {total_findings}", flush=True)
+        if time.time() - start_time > MAX_RUNTIME_SECONDS: break
+
+    print(f"\n🏁 Finished. Total new sites: {total_new}", flush=True)
 
 if __name__ == "__main__":
     main()
