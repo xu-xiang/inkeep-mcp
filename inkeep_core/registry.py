@@ -24,7 +24,7 @@ DEFAULT_SITES = {
         "url": "https://goteleport.com/docs",
         "description": "Teleport (Access Plane) official documentation"
     }
-}
+} # END_DEFAULT_SITES
 
 class SiteRegistry:
     def __init__(self, config_dir=None):
