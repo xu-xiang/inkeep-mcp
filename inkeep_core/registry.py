@@ -50,47 +50,47 @@ DEFAULT_SITES = {
     },
     "bun": {
         "url": "https://bun.com",
-        "description": "Incredibly fast JavaScript runtime, bundler, test runner, an"
+        "description": "Incredibly fast JavaScript runtime, bundler, test runner, and package manager."
     },
     "zod": {
         "url": "https://zod.dev",
-        "description": "TypeScript-first schema validation with static type inferenc"
+        "description": "TypeScript-first schema validation with static type inference."
     },
     "novu": {
         "url": "https://docs.novu.co",
-        "description": "The open-source notification Inbox infrastructure. E-mail, S"
+        "description": "The open-source notification Inbox infrastructure. E-mail, SMS, and Push."
     },
     "litellm": {
         "url": "https://docs.litellm.ai/docs",
-        "description": "Python SDK, Proxy Server (AI Gateway) to call 100+ LLM APIs "
+        "description": "Python SDK, Proxy Server (AI Gateway) to call 100+ LLM APIs."
     },
     "posthog": {
         "url": "https://posthog.com",
-        "description": "🦔 PostHog is an all-in-one developer platform for building s"
+        "description": "🦔 PostHog is an all-in-one developer platform for building products."
     },
     "goose": {
         "url": "https://block.github.io/goose",
-        "description": "an open source, extensible AI agent that goes beyond code su"
+        "description": "An open source, extensible AI agent that goes beyond code suggestions."
     },
     "frigate": {
         "url": "https://docs.frigate.video",
-        "description": "NVR with realtime local object detection for IP cameras"
+        "description": "NVR with realtime local object detection for IP cameras."
     },
     "fingerprintjs": {
         "url": "https://docs.fingerprint.com",
-        "description": "The most advanced free and open-source browser fingerprintin"
+        "description": "The most advanced free and open-source browser fingerprinting."
     },
     "spacetimedb": {
         "url": "https://spacetimedb.com/docs",
-        "description": "Multiplayer at the speed of light"
+        "description": "Multiplayer at the speed of light."
     },
     "nextra": {
         "url": "https://nextra.site",
-        "description": "Simple, powerful and flexible site generation framework with"
+        "description": "Simple, powerful and flexible site generation framework with Next.js."
     },
     "zitadel": {
         "url": "https://zitadel.com",
-        "description": "ZITADEL - Identity infrastructure, simplified for you."
+        "description": "ZITADEL - Identity infrastructure, simplified for you."
     }
 } # END_DEFAULT_SITES
 
@@ -109,27 +109,19 @@ class SiteRegistry:
             self.registry_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _load_registry(self):
-        """
-        加载注册表，并自动合并/更新内置的默认站点配置。
-        这确保了当代码更新（如 Neon URL 变更）时，用户本地配置能自动修复。
-        """
         if not self.registry_path.exists():
             self.save_registry(DEFAULT_SITES)
             return DEFAULT_SITES.copy()
         try:
             with open(self.registry_path, 'r') as f:
                 data = json.load(f)
-                
-                # 智能合并：强制更新内置站点，保留用户自定义站点
                 has_changes = False
                 for alias, info in DEFAULT_SITES.items():
                     if alias not in data or data[alias] != info:
                         data[alias] = info
                         has_changes = True
-                
                 if has_changes:
                     self.save_registry(data)
-                    
                 return data
         except json.JSONDecodeError:
             self.save_registry(DEFAULT_SITES)
@@ -143,11 +135,7 @@ class SiteRegistry:
     def add_site(self, alias, url, description=None):
         if not description:
             description = f"Documentation for {alias}"
-        
-        self.sites[alias] = {
-            "url": url,
-            "description": description
-        }
+        self.sites[alias] = { "url": url, "description": description }
         self.save_registry()
 
     def remove_site(self, alias):
@@ -158,20 +146,10 @@ class SiteRegistry:
         return False
 
     def get_url(self, alias_or_url):
-        """
-        智能解析输入：
-        1. 检查是否为已注册的 alias。
-        2. 检查是否为 URL (http/https)。
-        3. 否则返回 None。
-        """
-        # Case 1: Alias match
         if alias_or_url in self.sites:
             return self.sites[alias_or_url]["url"]
-        
-        # Case 2: Direct URL
         if alias_or_url.startswith("http://") or alias_or_url.startswith("https://"):
             return alias_or_url
-            
         return None
 
     def list_sites(self):

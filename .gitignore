@@ -9,3 +9,4 @@ venv/
 .gemini/
 .idea/
 .vscode/
+test/
