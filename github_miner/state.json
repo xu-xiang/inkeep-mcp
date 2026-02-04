@@ -1,5 +1,14 @@
 {
-  "max_stars": 500000,
-  "scanned_domains": [],
+  "max_stars": 12,
+  "scanned_domains": [
+    "orcasound.net",
+    "html5ify.com",
+    "reduce-algebra.sourceforge.io",
+    "eunomia.dev",
+    "adityaketkar.netlify.app",
+    "opensourcerouting.org",
+    "alexkowa.github.io",
+    "nnstreamer.mooo.com"
+  ],
   "found_sites": []
 }
