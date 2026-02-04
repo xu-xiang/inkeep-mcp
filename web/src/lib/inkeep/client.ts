@@ -1,49 +1,67 @@
-import { extractConfig, InkeepConfig } from './extractor';
+import { extractConfig } from './extractor';
 import { solveChallenge } from './pow';
-import { createParser } from 'eventsource-parser';
 
 export async function* askInkeep(url: string, message: string) {
-  // 1. Get Config
-  yield { type: 'status', content: `Scanning ${url} for configuration...` };
+  yield { type: 'status', content: `Scanning ${new URL(url).hostname} for live keys...` };
+  
   const config = await extractConfig(url);
   
   if (!config) {
-    yield { type: 'error', content: 'Failed to extract Inkeep configuration from target site.' };
+    yield { type: 'error', content: 'Failed to extract Inkeep configuration. Please ensure the target site is supported.' };
     return;
   }
   
-  // 2. Get Challenge
-  yield { type: 'status', content: 'Requesting PoW challenge...' };
-  const headers = {
-    "Origin": new URL(url).origin,
+  const targetOrigin = new URL(url).origin;
+  const commonHeaders = {
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Origin": targetOrigin,
     "Referer": url,
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Content-Type": "application/json"
+    "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "cross-site"
   };
 
-  const challengeRes = await fetch("https://api.inkeep.com/v1/challenge", { headers });
+  // 1. Get Challenge
+  yield { type: 'status', content: 'Requesting secure session...' };
+  const challengeRes = await fetch("https://api.inkeep.com/v1/challenge", { headers: commonHeaders });
+  
   if (!challengeRes.ok) {
-    yield { type: 'error', content: `Challenge failed: ${challengeRes.status}` };
+    yield { type: 'error', content: `Security Gate Error: ${challengeRes.status}` };
     return;
   }
   
-  // 3. Solve Challenge
-  yield { type: 'status', content: 'Solving SHA-256 PoW challenge (Edge Compute)...' };
+  // 2. Solve Challenge
+  yield { type: 'status', content: 'Solving PoW challenge...' };
   const challengeData = await challengeRes.json();
   const solution = await solveChallenge(challengeData);
 
-  // 4. Send Chat Request
+  // 3. Chat
   const chatUrl = "https://api.inkeep.com/v1/chat/completions";
-  const chatHeaders: any = { ...headers, "x-inkeep-challenge-solution": solution };
+  // Important: apiKey and integrationId are used interchangeably as Bearer tokens
+  const authHeader = `Bearer ${config.apiKey || config.integrationId}`;
   
-  if (config.apiKey) chatHeaders["Authorization"] = `Bearer ${config.apiKey}`;
-  else if (config.integrationId) chatHeaders["Authorization"] = `Bearer ${config.integrationId}`;
+  const chatHeaders = {
+    ...commonHeaders,
+    "Authorization": authHeader,
+    "Content-Type": "application/json",
+    "x-inkeep-challenge-solution": solution,
+    "x-stainless-helper-method": "stream"
+  };
 
   const payload = {
     model: "inkeep-qa-expert",
     messages: [{ role: "user", content: message }],
     stream: true
   };
+
+  yield { type: 'status', content: 'Retrieving official answer...' };
 
   const response = await fetch(chatUrl, {
     method: "POST",
@@ -52,52 +70,39 @@ export async function* askInkeep(url: string, message: string) {
   });
 
   if (!response.ok) {
-    yield { type: 'error', content: `API Error: ${response.status} ${response.statusText}` };
+    const errorBody = await response.text();
+    yield { type: 'error', content: `Inkeep API Error (${response.status}): ${errorBody}` };
     return;
   }
 
-  // 5. Parse SSE Stream
   const reader = response.body?.getReader();
   if (!reader) return;
 
-  const parser = createParser((event) => {
-    if (event.type === 'event') {
-      if (event.data === '[DONE]') return;
-      try {
-        const json = JSON.parse(event.data);
-        const content = json.choices?.[0]?.delta?.content || "";
-        if (content) {
-          // Ideally we yield here, but generator inside callback is tricky.
-          // We'll handle this by pushing to a buffer or using a specialized async iterator.
-          // For simplicity in this Edge function context, let's use a simpler approach below.
-        }
-      } catch (e) {}
-    }
-  });
-  
-  // Simplified SSE parsing manually for generator compatibility
   const decoder = new TextDecoder();
+  let buffer = '';
+
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('
-');
       
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') break;
-          try {
-            const json = JSON.parse(data);
-            const content = json.choices?.[0]?.delta?.content;
-            if (content) yield { type: 'delta', content };
-          } catch (e) {}
-        }
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') break;
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.delta?.content;
+          if (content) yield { type: 'delta', content };
+        } catch (e) {}
       }
     }
   } catch (e) {
-    yield { type: 'error', content: `Stream error: ${e}` };
+    yield { type: 'error', content: `Stream error: ${String(e)}` };
   }
 }

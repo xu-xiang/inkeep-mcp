@@ -15,16 +15,12 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // askInkeep is an async generator
           for await (const chunk of askInkeep(url, message)) {
-            // Convert chunk object to NDJSON string
-            const text = JSON.stringify(chunk) + '
-';
+            const text = JSON.stringify(chunk) + '\n';
             controller.enqueue(encoder.encode(text));
           }
         } catch (e) {
-          const errorJson = JSON.stringify({ type: 'error', content: String(e) }) + '
-';
+          const errorJson = JSON.stringify({ type: 'error', content: String(e) }) + '\n';
           controller.enqueue(encoder.encode(errorJson));
         } finally {
           controller.close();
