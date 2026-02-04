@@ -37,4 +37,8 @@ jobs:
           git config --global user.email "bot@inkeep-mcp"
           git add github_miner/state.json inkeep_core/registry.py README.md README_zh.md
           # Only commit if there are changes
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Auto: Discovered new Inkeep sites" && git push)
+          if ! git diff --quiet --staged; then
+            git commit -m "🤖 Auto: Discovered new Inkeep sites"
+            git pull --rebase origin main
+            git push
+          fi
