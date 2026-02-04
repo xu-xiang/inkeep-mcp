@@ -1,19 +1,6 @@
 {
-  "max_stars": 50,
-  "scanned_domains": [
-    "socket.io",
-    "docs.fuel.network",
-    "react.dev",
-    "ragflow.io",
-    "getbootstrap.com",
-    "base.org"
-  ],
-  "found_sites": [
-    "https://react.dev",
-    "https://getbootstrap.com/docs/5.3",
-    "https://ragflow.io/docs/dev",
-    "https://docs.base.org",
-    "https://socket.io",
-    "https://docs.fuel.network"
-  ]
+  "max_stars": 500000,
+  "scanned_domains": [],
+  "found_sites": [],
+  "last_gradient": 1000
 }

@@ -17,18 +17,16 @@ from inkeep_core.client import InkeepClient
 GITHUB_TOKEN = os.environ.get("MINER_TOKEN") or os.environ.get("GITHUB_TOKEN")
 STATE_FILE = Path("github_miner/state.json")
 
-# Max runtime per execution (GitHub Action standard timeout is 6h, but we schedule hourly)
-# We stop at 45 minutes to allow plenty of time for commit/push and overhead.
-MAX_RUNTIME_SECONDS = 45 * 60 
-
 def load_state():
     if STATE_FILE.exists():
         with open(STATE_FILE, 'r') as f:
             state = json.load(f)
+            # 增加 last_gradient 字段，默认为 1000
+            if "last_gradient" not in state: state["last_gradient"] = 1000
             if "max_stars" not in state: state["max_stars"] = 500000
             if "scanned_domains" not in state: state["scanned_domains"] = []
             return state
-    return {"max_stars": 500000, "scanned_domains": [], "found_sites": []}
+    return {"max_stars": 500000, "scanned_domains": [], "found_sites": [], "last_gradient": 1000}
 
 def save_state(state):
     with open(STATE_FILE, 'w') as f:
@@ -47,31 +45,88 @@ def check_rate_limit(res):
             if sleep_seconds > 0: time.sleep(sleep_seconds)
     except: pass
 
-def search_github(max_stars):
+def search_github(state):
+    """
+    Executes search with Dynamic Gradient logic.
+    Returns: (repos, next_max_stars, next_gradient)
+    """
+    max_stars = state["max_stars"]
+    gradient = state.get("last_gradient", 1000)
+    
     if max_stars < 10:
         print("Stars floor reached.")
-        return [], 500000
-    query = f"stars:<={max_stars} archived:false fork:false"
+        return [], 500000, 1000
+
+    # --- 1. Bootstrapping Logic (First 2 runs hardcoded) ---
+    # Fix: Use correct range syntax stars:MIN..MAX
+    if max_stars == 500000:
+        query = "stars:24000..500000 pushed:>=2025-11-04 fork:false archived:false"
+        print(f"🔍 [Bootstrap 1] Query: {query}")
+    elif max_stars == 24000:
+        query = "stars:23000..24000 pushed:>=2025-11-04 fork:false archived:false"
+        print(f"🔍 [Bootstrap 2] Query: {query}")
+    else:
+        # --- 2. Dynamic Gradient Logic ---
+        min_stars = max(0, max_stars - gradient)
+        query = f"stars:{min_stars}..{max_stars} archived:false fork:false"
+        print(f"🔍 [Dynamic] Query: {query} (Gradient: {gradient})")
+
     url = "https://api.github.com/search/repositories"
     params = {"q": query, "sort": "stars", "order": "desc", "per_page": 100, "page": 1}
     headers = {"Accept": "application/vnd.github+json", "Authorization": f"Bearer {GITHUB_TOKEN}"}
-    print(f"🔍 Searching: stars <= {max_stars} ...")
+
     try:
         res = requests.get(url, headers=headers, params=params, timeout=15)
+        
+        # Critical: Handle 422 (Invalid Query) - Do not retry
+        if res.status_code == 422:
+            print(f"❌ API Error 422: Invalid Query. {res.text}")
+            # Skip this range to avoid infinite loop
+            return [], max_stars - gradient, gradient
+
         if res.status_code in [403, 429]:
-            check_rate_limit(res); return search_github(max_stars)
+            print(f"⚠️ Rate limit hit (Status {res.status_code})")
+            check_rate_limit(res)
+            return search_github(state) # Retry
+            
         if res.status_code != 200:
-            print(f"❌ API Error {res.status_code}"); return [], max_stars
+            print(f"❌ API Error {res.status_code}: {res.text}")
+            return [], max_stars, gradient
+
         check_rate_limit(res)
+        
         items = res.json().get("items", [])
-        if not items: return [], 50 
-        first, last = items[0]["stargazers_count"], items[-1]["stargazers_count"]
-        print(f"   Batch: Top={first}, Bottom={last}, Count={len(items)}")
+        
+        if not items:
+            print(f"   No items in range. Increasing gradient.")
+            # Nothing found? Increase gradient to search wider next time
+            new_gradient = gradient * 2
+            return [], max_stars - gradient, new_gradient
+            
+        first = items[0]["stargazers_count"]
+        last = items[-1]["stargazers_count"]
+        count = len(items)
+        print(f"   Result: Count={count}, Top={first}, Bottom={last}")
+        
+        # --- 3. Calculate Next State ---
         next_max = last
-        if len(items) >= 100 and next_max == max_stars: next_max -= 1
-        return items, next_max
+        if next_max == max_stars: 
+            next_max -= 1
+            
+        # Calculate Next Gradient
+        if count < 100:
+            next_gradient = int(gradient * 1.5)
+            print(f"   -> Sparse batch (<100). Increasing gradient to {next_gradient}")
+        else:
+            actual_spread = first - last
+            next_gradient = max(100, actual_spread)
+            print(f"   -> Full batch. Adjusting gradient to actual spread: {next_gradient}")
+
+        return items, next_max, next_gradient
+
     except Exception as e:
-        print(f"❌ Exception: {e}"); return [], max_stars
+        print(f"❌ Exception: {e}")
+        return [], max_stars, gradient
 
 def verify_site_chat(url):
     print(f"   Verifying chat for {url} ...", end="", flush=True)
@@ -105,7 +160,6 @@ def update_readmes():
     import inkeep_core.registry
     importlib.reload(inkeep_core.registry)
     sites = inkeep_core.registry.DEFAULT_SITES
-    
     for readme_file in ["README.md", "README_zh.md"]:
         if not os.path.exists(readme_file): continue
         is_zh = "zh" in readme_file
@@ -118,7 +172,6 @@ def update_readmes():
             elif is_zh and desc.startswith("Official docs for "):
                 desc = desc.replace("Official docs for ", "") + " 官方文档"
             md_lines.append(f"*   **{name}** ({desc})")
-        
         md_content = "\n".join(md_lines)
         with open(readme_file, 'r') as f: text = f.read()
         pattern = r"(<!-- AUTO-GENERATED-SITES:START -->)(.*?)(<!-- AUTO-GENERATED-SITES:END -->)"
@@ -135,30 +188,33 @@ def main():
     scanned = set(state["scanned_domains"])
     extractor = ConfigExtractor()
     
+    MAX_RUNTIME_SECONDS = 45 * 60 
+    
     print(f"🚀 Starting continuous mining session (Max {MAX_RUNTIME_SECONDS}s)...")
     
     total_findings = 0
     
     while True:
-        # Time check
         elapsed = time.time() - start_time
         if elapsed > MAX_RUNTIME_SECONDS:
-            print(f"⏰ Time limit reached ({elapsed:.0f}s). Stopping gracefully.")
+            print(f"⏰ Time limit reached. Stopping.")
             break
             
-        repos, next_max_stars = search_github(state["max_stars"])
+        repos, next_max, next_grad = search_github(state)
         
-        # If no items or we hit the floor, reset loop (but maybe stop to avoid API burn)
-        if not repos or next_max_stars >= state["max_stars"]:
-             # If we didn't progress, stop to prevent infinite loop spamming API
+        # Update logic state immediately
+        state["max_stars"] = next_max
+        state["last_gradient"] = next_grad
+        
+        if not repos:
              if state["max_stars"] < 50:
-                 state["max_stars"] = 500000 # Reset for next hour
-             print("End of search cycle reached.")
-             break
-
+                 state["max_stars"] = 500000 
+                 print("Resetting to top.")
+             else:
+                 pass
+        
         batch_findings = 0
         for repo in repos:
-            # Check time even inside the inner loop for fine-grained control
             if time.time() - start_time > MAX_RUNTIME_SECONDS: break
             
             homepage = repo.get("homepage")
@@ -180,22 +236,17 @@ def main():
                     alias = repo['name'].lower().replace('.', '-').replace('_', '-')
                     desc = (repo.get('description') or f"Docs for {repo['name']}")[:60].replace('"', '\\"').replace('\n', ' ')
                     update_registry_file({"alias": alias, "url": found_url, "desc": desc})
-                    batch_findings += 1
-                    total_findings += 1
-                    state["found_sites"].append(found_url)
+                    batch_findings += 1; total_findings += 1; state["found_sites"].append(found_url)
                 else: print("⚠️ Verification Failed")
             else: print("⚪")
             scanned.add(domain)
         
-        # Save state immediately after each batch
-        state["max_stars"] = next_max_stars
         state["scanned_domains"] = list(scanned)
         save_state(state)
         
-        if batch_findings > 0:
-            update_readmes()
+        if batch_findings > 0: update_readmes()
             
-    print(f"\n🏁 Session Complete. Total new sites found this run: {total_findings}")
+    print(f"\n🏁 Session Complete. New sites: {total_findings}")
 
 if __name__ == "__main__":
     main()
