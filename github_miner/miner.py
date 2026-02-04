@@ -20,8 +20,8 @@ def load_state():
     if STATE_FILE.exists():
         with open(STATE_FILE, 'r') as f:
             state = json.load(f)
-            if "scanned_domains" not in state: state["scanned_domains"] = []
             if "max_stars" not in state: state["max_stars"] = 500000
+            if "scanned_domains" not in state: state["scanned_domains"] = []
             return state
     return {"max_stars": 500000, "scanned_domains": [], "found_sites": []}
 
@@ -30,39 +30,75 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 def check_rate_limit(res):
-    remaining = int(res.headers.get("x-ratelimit-remaining", 10))
-    limit = int(res.headers.get("x-ratelimit-limit", 30))
-    reset_time = int(res.headers.get("x-ratelimit-reset", time.time() + 60))
-    buffer = max(3, int(limit * 0.1))
-    if remaining <= buffer:
-        sleep_seconds = reset_time - time.time() + 5
-        print(f"⚠️ Rate limit low ({remaining}/{limit}). Sleeping for {sleep_seconds:.0f}s...")
-        time.sleep(max(5, sleep_seconds))
+    try:
+        remaining = int(res.headers.get("x-ratelimit-remaining", 10))
+        limit = int(res.headers.get("x-ratelimit-limit", 30))
+        reset_time = int(res.headers.get("x-ratelimit-reset", time.time() + 60))
+        buffer = max(3, int(limit * 0.1))
+        
+        if remaining <= buffer:
+            sleep_seconds = reset_time - time.time() + 5
+            print(f"⚠️ Rate limit low ({remaining}/{limit}). Sleeping for {sleep_seconds:.0f}s...")
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+    except:
+        pass
 
 def search_github(max_stars):
-    if max_stars < 50:
-        print("Stars limit reached. Resetting to top.")
-        return [], 500000 
+    """
+    Slices the top 100 repos with stars <= max_stars.
+    Removed 'homepage:http*' to avoid search index issues.
+    """
+    if max_stars < 10:
+        print("Stars floor reached.")
+        return [], 500000
 
-    query = f"stars:1..{max_stars} homepage:http* archived:false fork:false"
+    query = f"stars:<={max_stars} archived:false fork:false"
     url = "https://api.github.com/search/repositories"
-    params = {"q": query, "sort": "stars", "order": "desc", "per_page": 100, "page": 1}
-    headers = {"Accept": "application/vnd.github+json", "Authorization": f"Bearer {GITHUB_TOKEN}"}
+    
+    params = {
+        "q": query,
+        "sort": "stars",
+        "order": "desc",
+        "per_page": 100, 
+        "page": 1
+    }
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {GITHUB_TOKEN}"
+    }
 
-    print(f"🔍 Searching GitHub: stars <= {max_stars} ...")
+    print(f"🔍 Searching: stars <= {max_stars} ...")
+    
     try:
         res = requests.get(url, headers=headers, params=params, timeout=15)
+        
         if res.status_code in [403, 429]:
+            print(f"⚠️ Rate limit hit (Status {res.status_code})")
             check_rate_limit(res)
             return search_github(max_stars)
+            
         if res.status_code != 200:
-            print(f"❌ API Error {res.status_code}")
+            print(f"❌ API Error {res.status_code}: {res.text}")
             return [], max_stars
+
         check_rate_limit(res)
+        
         items = res.json().get("items", [])
-        if not items: return [], 50
-        min_stars = items[-1]["stargazers_count"]
-        return items, (min_stars - 1 if min_stars == max_stars else min_stars)
+        if not items:
+            print("No items found.")
+            return [], 50 
+            
+        first = items[0]["stargazers_count"]
+        last = items[-1]["stargazers_count"]
+        print(f"   Batch: Top={first}, Bottom={last}, Count={len(items)}")
+        
+        next_max = last
+        if len(items) >= 100 and next_max == max_stars:
+            next_max -= 1
+            
+        return items, next_max
+
     except Exception as e:
         print(f"❌ Exception: {e}")
         return [], max_stars
@@ -76,11 +112,83 @@ def update_registry_file(new_site):
     if f'"{alias}"' in content:
         return
 
-    entry = f'''    "{alias}": {{
+    tag = "} # END_DEFAULT_SITES"
+    tag_index = content.find(tag)
+    
+    if tag_index != -1:
+        prefix = content[:tag_index].rstrip()
+        suffix = content[tag_index:]
+        
+        if not prefix.endswith(","):
+            prefix += ","
+            
+        entry = f'''
+    "{alias}": {{
         "url": "{url}",
         "description": "{desc}"
     }}'''
+        
+        with open(file_path, 'w') as f:
+            f.write(prefix + entry + "\n" + suffix)
+        print(f"🎉 Code Updated: Added {alias}")
+    else:
+        print("❌ Failed to patch registry.py - Tag not found")
 
-    # 精准匹配 # END_DEFAULT_SITES 之前的最后一个条目
-    # 我们要在最后一个 } 后面补逗号，然后插入新条目
-    pattern = r'(\s+)(\
+def main():
+    if not GITHUB_TOKEN:
+        print("❌ GITHUB_TOKEN not set"); sys.exit(1)
+
+    state = load_state()
+    scanned = set(state["scanned_domains"])
+    
+    # Run only ONE batch per hour/execution to respect limits and allow CI scheduling
+    repos, next_max_stars = search_github(state["max_stars"])
+    extractor = ConfigExtractor()
+    new_findings = 0
+    
+    for repo in repos:
+        homepage = repo.get("homepage")
+        # Local filter since we removed it from API query
+        if not homepage or not homepage.startswith("http"):
+            continue
+            
+        domain = urlparse(homepage).netloc
+        if not domain or domain in scanned: continue
+        
+        print(f"Checking {domain} ...", end=" ")
+        
+        targets = [homepage.rstrip("/"), f"{homepage.rstrip('/')}/docs", f"https://docs.{domain}"]
+        targets = list(dict.fromkeys(targets))
+        
+        found_url = None
+        for url in targets:
+            # Silence extractor logs for cleaner output
+            # (Assuming ConfigExtractor has been updated to remove prints, otherwise they will show)
+            res = extractor.scan(url)
+            if res:
+                found_url = url
+                break
+        
+        if found_url:
+            print(f"✅ FOUND!")
+            alias = repo['name'].lower().replace('.', '-').replace('_', '-')
+            desc = (repo.get('description') or f"Docs for {repo['name']}")[:60].replace('"', '\"').replace('\n', ' ')
+            
+            update_registry_file({
+                "alias": alias,
+                "url": found_url,
+                "desc": desc
+            })
+            new_findings += 1
+            state["found_sites"].append(found_url)
+        else:
+            print("⚪")
+        scanned.add(domain)
+
+    state["max_stars"] = next_max_stars
+    state["scanned_domains"] = list(scanned)
+    save_state(state)
+    print(f"\n🏁 Batch Complete. Found {new_findings} new sites. Next ceiling: {next_max_stars}")
+
+if __name__ == "__main__":
+    main()

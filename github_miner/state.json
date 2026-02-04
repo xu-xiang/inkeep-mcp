@@ -1,14 +1,19 @@
 {
-  "max_stars": 12,
+  "max_stars": 500000,
   "scanned_domains": [
-    "orcasound.net",
-    "html5ify.com",
-    "reduce-algebra.sourceforge.io",
-    "eunomia.dev",
-    "adityaketkar.netlify.app",
-    "opensourcerouting.org",
-    "alexkowa.github.io",
-    "nnstreamer.mooo.com"
+    "react.dev",
+    "getbootstrap.com",
+    "ragflow.io",
+    "base.org",
+    "socket.io",
+    "docs.fuel.network"
   ],
-  "found_sites": []
+  "found_sites": [
+    "https://react.dev",
+    "https://getbootstrap.com/docs/5.3",
+    "https://ragflow.io/docs/dev",
+    "https://docs.base.org",
+    "https://socket.io",
+    "https://docs.fuel.network"
+  ]
 }

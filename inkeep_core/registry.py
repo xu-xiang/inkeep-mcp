@@ -23,6 +23,30 @@ DEFAULT_SITES = {
     "teleport": {
         "url": "https://goteleport.com/docs",
         "description": "Teleport (Access Plane) official documentation"
+    },
+    "react": {
+        "url": "https://react.dev",
+        "description": "The library for web and native user interfaces."
+    },
+    "bootstrap": {
+        "url": "https://getbootstrap.com",
+        "description": "The most popular HTML, CSS, and JavaScript framework for dev"
+    },
+    "ragflow": {
+        "url": "https://ragflow.io",
+        "description": "RAGFlow is a leading open-source Retrieval-Augmented Generat"
+    },
+    "node": {
+        "url": "https://base.org",
+        "description": "Everything required to run your own Base node"
+    },
+    "socket-io": {
+        "url": "https://socket.io",
+        "description": "Realtime application framework (Node.JS server)"
+    },
+    "sway": {
+        "url": "https://docs.fuel.network/docs/sway",
+        "description": "🌴 Empowering everyone to build reliable and efficient smart "
     }
 } # END_DEFAULT_SITES
 
