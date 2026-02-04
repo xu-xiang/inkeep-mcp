@@ -91,6 +91,10 @@ DEFAULT_SITES = {
     "zitadel": {
         "url": "https://zitadel.com",
         "description": "ZITADEL - Identity infrastructure, simplified for you."
+    },
+    "opal": {
+        "url": "https://docs.opal.ac",
+        "description": "Policy and data administration, distribution, and real-time "
     }
 } # END_DEFAULT_SITES
 

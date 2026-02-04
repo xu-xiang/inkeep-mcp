@@ -125,6 +125,7 @@ Add to your `~/Library/Application Support/Claude/claude_desktop_config.json`:
 *   **Spacetimedb** (Multiplayer at the speed of light.)
 *   **Nextra** (Simple, powerful and flexible site generation framework with Next.js.)
 *   **Zitadel** (ZITADEL - Identity infrastructure, simplified for you.)
+*   **Opal** (Policy and data administration, distribution, and real-time )
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...and any other site you add via `cli.py add`!*
