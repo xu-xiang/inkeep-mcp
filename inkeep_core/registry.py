@@ -19,6 +19,10 @@ DEFAULT_SITES = {
     "neon": {
         "url": "https://neon.com/docs",
         "description": "Neon (Serverless Postgres) official documentation"
+    },
+    "teleport": {
+        "url": "https://goteleport.com/docs",
+        "description": "Teleport (Access Plane) official documentation"
     }
 }
 

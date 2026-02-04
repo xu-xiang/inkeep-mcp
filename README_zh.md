@@ -127,6 +127,7 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 *   **Render** (Cloud Hosting)
 *   **Clerk** (Authentication)
 *   **Neon** (Serverless Postgres)
+*   **Teleport** (Infrastructure Access)
 *   *...任何使用 Inkeep 的网站均可添加！*
 
 ## 🤝 贡献

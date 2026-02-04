@@ -129,6 +129,7 @@ Once configured, just tell your AI:
 *   **Render** (Cloud Hosting)
 *   **Clerk** (Authentication)
 *   **Neon** (Serverless Postgres)
+*   **Teleport** (Infrastructure Access)
 *   *...and any site you add!*
 
 ## 🤝 Contributing
