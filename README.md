@@ -30,18 +30,10 @@ This tool "liberates" that knowledge. It acts as a universal adapter that:
 **Result**: Your AI Agent gains the ability to "read" the official docs of any product that uses Inkeep.
 
 ---
-*   ✅ **Real-time Reading**: Empowers your Agent to query the latest official docs. No more hallucinating outdated APIs.
-*   ✅ **Self-Healing System**: Built-in auto-retry and config refresh. If a site updates its API Key, the tool automatically detects and re-extracts it—zero manual intervention.
-*   ✅ **Zero-Config**: No API Key registration required. It implements **intelligent frontend scanning** to extract configurations and includes a **PoW (Proof of Work) solver** to pass service verification legitimately.
-*   ✅ **Workflow Loop**: Ask "How to deploy Docker on Render?" directly in Gemini CLI. The answer appears instantly without leaving your terminal.
-
----
 
 ## 🚀 Getting Started
 
-### 1. Installation
-
-Requires Python 3.8+.
+### Installation
 
 ```bash
 git clone https://github.com/xu-xiang/inkeep-mcp.git
@@ -49,36 +41,33 @@ cd inkeep-mcp
 pip install -r requirements.txt
 ```
 
-### 2. CLI Usage (Human Mode)
+### CLI Usage (Human Mode)
 
-Use it as a standalone tool to query docs from your terminal.
+You can use it as a standalone CLI tool to query docs from your terminal.
 
 ```bash
-# List supported sources
-python3 cli.py list
+# Ask a question to Langfuse docs
+python3 cli.py ask langfuse "How do I trace LangChain chains?"
 
-# Quick question (using alias)
-python3 cli.py ask langfuse "How to trace LangChain chains?"
-
-# Interactive chat mode
+# Start an interactive chat session with Render docs
 python3 cli.py chat render
 
-# Add any new Inkeep-powered site (e.g., Supabase)
+# Add a new documentation source
 python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 ```
 
----
+## 🤖 MCP Integration (Agent Mode)
 
-## 🤖 AI Agent Integration (MCP)
+Give your AI assistant the power to read docs.
 
-This is the core of the project. Give your AI assistant the "Read Docs" skill.
+### Gemini CLI
 
-### Gemini CLI Configuration (`~/.gemini/config.json`)
+Add to your `~/.gemini/config.json`:
 
 ```json
 {
   "mcpServers": {
-    "inkeep-docs": {
+    "inkeep": {
       "command": "python3",
       "args": ["/absolute/path/to/inkeep-mcp/mcp_server.py"],
       "env": {"PYTHONUNBUFFERED": "1"}
@@ -87,14 +76,14 @@ This is the core of the project. Give your AI assistant the "Read Docs" skill.
 }
 ```
 
-### Claude Desktop Configuration
+### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Add to your `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "inkeep-docs": {
+    "inkeep": {
       "command": "python3",
       "args": ["/absolute/path/to/inkeep-mcp/mcp_server.py"]
     }
@@ -102,39 +91,39 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-### ✨ Experience
+## 📖 How it Works
 
-Once configured, just tell your AI:
+1.  **Registry**: Maintains a local map of aliases (`langfuse`) to URLs (`https://langfuse.com`). It automatically syncs with the latest built-in defaults on startup.
+2.  **Extraction**: When connecting to a new site, it simulates a browser request, scanning frontend JS bundles to find the embedded Inkeep configuration.
+3.  **Authentication**: It requests a Challenge from Inkeep and solves the SHA-256 PoW locally.
+4.  **Query**: It streams the question to Inkeep's QA expert model and returns the result to your Agent.
 
-> **User**: "I want to monitor my Python app with Langfuse, how?"
->
-> **AI (Thinking)**:
-> 1. *Identifies 'Langfuse'.*
-> 2. *Calls `ask_documentation(source="langfuse", question="python integration guide")`.*
-> 3. *Inkeep MCP **simulates the original doc site identity** to connect to Inkeep, solves security challenges, and streams the latest answer.*
->
-> **AI (Response)**: "According to Langfuse docs, install `pip install langfuse`, then..."
+## 📦 Supported Sites
 
----
+*Auto-discovered by our miner:*
 
-## 🛠️ Technical Principles
+<!-- AUTO-GENERATED-SITES:START -->
+*   **Langfuse** (Langfuse (LLM Engineering Platform) official documentation)
+*   **Render** (Render (Cloud Hosting) official documentation)
+*   **Clerk** (Clerk (Authentication) official documentation)
+*   **Neon** (Neon (Serverless Postgres) official documentation)
+*   **Teleport** (Teleport (Access Plane) official documentation)
+*   **React** (Official docs for react)
+*   **Bootstrap** (Official docs for bootstrap)
+*   **Ragflow** (Official docs for ragflow)
+*   **Node** (Official docs for node)
+*   **Socket-io** (Official docs for socket.io)
+*   **Sway** (Official docs for sway)
+<!-- AUTO-GENERATED-SITES:END -->
 
-1.  **Smart Registry**: Maintains a local mapping (`~/.inkeep/registry.json`) of aliases to URLs. Syncs with latest defaults on startup.
-2.  **Dynamic Extraction**: Simulates legitimate browser behavior to parse frontend JS bundles and extract Inkeep service credentials (e.g., API ID).
-3.  **Auto-PoW**: Inkeep uses Altcha for bot protection. We've built-in a SHA-256 solver to find the solution in milliseconds locally.
-
-## 📦 Supported Sites (Out of the Box)
-
-*   **Langfuse** (LLM Engineering)
-*   **Render** (Cloud Hosting)
-*   **Clerk** (Authentication)
-*   **Neon** (Serverless Postgres)
-*   **Teleport** (Infrastructure Access)
-*   *...and any site you add!*
+*...and any other site you add via `cli.py add`!*
 
 ## 🤝 Contributing
 
-PRs are welcome to improve extraction or add default sites!
+We love contributions!
+1.  Fork the repo.
+2.  Add support for more static site generators in `extractor.py`.
+3.  Submit a Pull Request.
 
 ## 📄 License
 

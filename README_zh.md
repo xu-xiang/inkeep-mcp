@@ -119,16 +119,25 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 2.  **动态提取 (Dynamic Extraction)**: 连接新站点时，脚本会模拟正常浏览器访问行为，解析前端 JS Bundle，智能定位并提取 Inkeep 服务所需的配置信息。
 3.  **自动过盾 (Auto-PoW)**: Inkeep 使用 Altcha 进行人机验证。本项目内置了 SHA-256 碰撞算法，能在本地毫秒级算出 Challenge 的解，合规通过服务验证。
 
-## 📦 开箱即用的站点
+## 📦 支持的站点
 
-默认已内置以下热门技术文档源，且支持无限扩展：
+*自动化机器人发现列表：*
 
-*   **Langfuse** (LLM Engineering)
-*   **Render** (Cloud Hosting)
-*   **Clerk** (Authentication)
-*   **Neon** (Serverless Postgres)
-*   **Teleport** (Infrastructure Access)
-*   *...任何使用 Inkeep 的网站均可添加！*
+<!-- AUTO-GENERATED-SITES:START -->
+*   **Langfuse** (Langfuse (LLM Engineering Platform) official documentation)
+*   **Render** (Render (Cloud Hosting) official documentation)
+*   **Clerk** (Clerk (Authentication) official documentation)
+*   **Neon** (Neon (Serverless Postgres) official documentation)
+*   **Teleport** (Teleport (Access Plane) official documentation)
+*   **React** (Official docs for react)
+*   **Bootstrap** (Official docs for bootstrap)
+*   **Ragflow** (Official docs for ragflow)
+*   **Node** (Official docs for node)
+*   **Socket-io** (Official docs for socket.io)
+*   **Sway** (Official docs for sway)
+<!-- AUTO-GENERATED-SITES:END -->
+
+*...以及任何你通过 `cli.py add` 添加的站点！*
 
 ## 🤝 贡献
 
