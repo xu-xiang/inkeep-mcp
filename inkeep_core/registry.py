@@ -47,6 +47,50 @@ DEFAULT_SITES = {
     "sway": {
         "url": "https://docs.fuel.network/docs/sway",
         "description": "🌴 Empowering everyone to build reliable and efficient smart "
+    },
+    "bun": {
+        "url": "https://bun.com",
+        "description": "Incredibly fast JavaScript runtime, bundler, test runner, an"
+    },
+    "zod": {
+        "url": "https://zod.dev",
+        "description": "TypeScript-first schema validation with static type inferenc"
+    },
+    "novu": {
+        "url": "https://docs.novu.co",
+        "description": "The open-source notification Inbox infrastructure. E-mail, S"
+    },
+    "litellm": {
+        "url": "https://docs.litellm.ai/docs",
+        "description": "Python SDK, Proxy Server (AI Gateway) to call 100+ LLM APIs "
+    },
+    "posthog": {
+        "url": "https://posthog.com",
+        "description": "🦔 PostHog is an all-in-one developer platform for building s"
+    },
+    "goose": {
+        "url": "https://block.github.io/goose",
+        "description": "an open source, extensible AI agent that goes beyond code su"
+    },
+    "frigate": {
+        "url": "https://docs.frigate.video",
+        "description": "NVR with realtime local object detection for IP cameras"
+    },
+    "fingerprintjs": {
+        "url": "https://docs.fingerprint.com",
+        "description": "The most advanced free and open-source browser fingerprintin"
+    },
+    "spacetimedb": {
+        "url": "https://spacetimedb.com/docs",
+        "description": "Multiplayer at the speed of light"
+    },
+    "nextra": {
+        "url": "https://nextra.site",
+        "description": "Simple, powerful and flexible site generation framework with"
+    },
+    "zitadel": {
+        "url": "https://zitadel.com",
+        "description": "ZITADEL - Identity infrastructure, simplified for you."
     }
 } # END_DEFAULT_SITES
 
