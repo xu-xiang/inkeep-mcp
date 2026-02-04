@@ -2,7 +2,7 @@ name: Inkeep Miner
 
 on:
   schedule:
-    - cron: '0 * * * *' # 每小时运行一次
+    - cron: '50 * * * *' # 每小时50分运行一次，避开高峰
   workflow_dispatch: # 允许手动触发
 
 jobs:
