@@ -1,0 +1,40 @@
+name: Inkeep Miner
+
+on:
+  schedule:
+    - cron: '0 * * * *' # 每小时运行一次
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 需要提交代码
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Run Miner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINER_TOKEN: ${{ secrets.MINER_TOKEN }}
+        run: |
+          python3 github_miner/miner.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Inkeep Miner Bot"
+          git config --global user.email "bot@inkeep-mcp"
+          git add github_miner/state.json inkeep_core/registry.py
+          # Only commit if there are changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Auto: Discovered new Inkeep sites" && git push)

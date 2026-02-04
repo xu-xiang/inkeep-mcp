@@ -1,0 +1,50 @@
+[
+  {
+    "url": "langfuse.com",
+    "detected_url": "https://langfuse.com",
+    "found": true,
+    "config": {
+      "apiKey": "2c0f7a404071c560479c83bbc8ff1de241a8ace9f713f19e"
+    }
+  },
+  {
+    "url": "neon.com",
+    "detected_url": "https://neon.com",
+    "found": true,
+    "config": {
+      "apiKey": "50714a5fd9e5900e1eaf4a6bb498435c7faa92003deca944"
+    }
+  },
+  {
+    "url": "clerk.com",
+    "detected_url": "https://clerk.com",
+    "found": true,
+    "config": {
+      "apiKey": "21f85f40dfa92dd4acf69d1820cfa4148364ecd73180fc35"
+    }
+  },
+  {
+    "url": "render.com",
+    "detected_url": "https://render.com/docs",
+    "found": true,
+    "config": {
+      "apiKey": "830d00f8428abd999b7de63c5292dda0661ab371500139dd"
+    }
+  },
+  {
+    "url": "posthog.com",
+    "detected_url": "https://posthog.com",
+    "found": true,
+    "config": {
+      "apiKey": "4a045e828bfc02f39305041b7d51e4c632072c57b587314b"
+    }
+  },
+  {
+    "url": "pinecone.io",
+    "detected_url": "https://pinecone.io",
+    "found": true,
+    "config": {
+      "apiKey": "d39717793c2a549fef9fd3c845bd0e11428e61dcf1ddcefc"
+    }
+  }
+]
