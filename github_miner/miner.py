@@ -126,17 +126,15 @@ def update_registry_file(new_site):
         return
 
     # Insert before the closing brace of DEFAULT_SITES
-    # Look for the last '}' that closes the dictionary
-    # A simple heuristic: search for the indentation of the entries
     
     entry_template = f'''    "{alias}": {{
         "url": "{url}",
         "description": "{desc}"
     }},
 '''
-    # Find the last entry's closing brace/comma to append after
-    # Assuming standard formatting
-    pattern = r'(    "[^"+]+": \{[^}]+\}[,]*\n)(\})
+    # Regex to find the last dictionary entry before the closing brace
+    # Matches: 4 spaces, quoted key, colon, brace block, optional comma/newline, then capturing group for the closing brace
+    pattern = r'(    "[^"]+": \{[^}]+\}[,]*\n)(\})'
     match = re.search(pattern, content, re.DOTALL)
     
     if match:
@@ -211,6 +209,7 @@ def main():
             # Prepare metadata
             alias = repo['name'].lower().replace('.', '-').replace('_', '-')
             desc = repo.get('description') or f"Official docs for {repo['name']}"
+            desc = desc.replace('"', '\"').replace('\n', ' ') # Escape quotes and newlines
             desc = desc[:60] + "..." if len(desc) > 60 else desc # Truncate
             
             new_site = {
