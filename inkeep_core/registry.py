@@ -95,6 +95,10 @@ DEFAULT_SITES = {
     "opal": {
         "url": "https://docs.opal.ac",
         "description": "Policy and data administration, distribution, and real-time "
+    },
+    "javascript": {
+        "url": "https://clerk.com",
+        "description": "Official JavaScript repository for Clerk authentication"
     }
 } # END_DEFAULT_SITES
 
