@@ -103,6 +103,10 @@ DEFAULT_SITES = {
     "vectordbbench": {
         "url": "https://zilliz.com/vector-database-benchmark-tool",
         "description": "Benchmark for vector databases."
+    },
+    "eon": {
+        "url": "https://www.pubnub.com/developers/eon",
+        "description": "An open-source chart and map framework for realtime data."
     }
 } # END_DEFAULT_SITES
 
