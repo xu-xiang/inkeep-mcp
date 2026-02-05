@@ -150,6 +150,7 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 *   **Javascript** (Official JavaScript repository for Clerk authentication)
 *   **Vectordbbench** (Benchmark for vector databases.)
 *   **Eon** (An open-source chart and map framework for realtime data.)
+*   **Kit** (Solana JavaScript SDK)
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...以及任何你通过 `cli.py add` 添加的站点！*

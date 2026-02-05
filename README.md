@@ -129,6 +129,7 @@ Add to your `~/Library/Application Support/Claude/claude_desktop_config.json`:
 *   **Javascript** (Official JavaScript repository for Clerk authentication)
 *   **Vectordbbench** (Benchmark for vector databases.)
 *   **Eon** (An open-source chart and map framework for realtime data.)
+*   **Kit** (Solana JavaScript SDK)
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...and any other site you add via `cli.py add`!*

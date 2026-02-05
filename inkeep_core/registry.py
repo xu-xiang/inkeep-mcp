@@ -107,6 +107,10 @@ DEFAULT_SITES = {
     "eon": {
         "url": "https://www.pubnub.com/developers/eon",
         "description": "An open-source chart and map framework for realtime data."
+    },
+    "kit": {
+        "url": "https://www.solanakit.com",
+        "description": "Solana JavaScript SDK"
     }
 } # END_DEFAULT_SITES
 
