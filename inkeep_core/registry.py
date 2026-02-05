@@ -111,6 +111,10 @@ DEFAULT_SITES = {
     "kit": {
         "url": "https://www.solanakit.com",
         "description": "Solana JavaScript SDK"
+    },
+    "lemonsqueezy-js": {
+        "url": "https://docs.lemonsqueezy.com/api",
+        "description": "Official JavaScript SDK for Lemon Squeezy."
     }
 } # END_DEFAULT_SITES
 

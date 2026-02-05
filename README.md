@@ -130,6 +130,7 @@ Add to your `~/Library/Application Support/Claude/claude_desktop_config.json`:
 *   **Vectordbbench** (Benchmark for vector databases.)
 *   **Eon** (An open-source chart and map framework for realtime data.)
 *   **Kit** (Solana JavaScript SDK)
+*   **Lemonsqueezy-js** (Official JavaScript SDK for Lemon Squeezy.)
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...and any other site you add via `cli.py add`!*
