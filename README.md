@@ -127,6 +127,7 @@ Add to your `~/Library/Application Support/Claude/claude_desktop_config.json`:
 *   **Zitadel** (ZITADEL - Identity infrastructure, simplified for you.)
 *   **Opal** (Policy and data administration, distribution, and real-time )
 *   **Javascript** (Official JavaScript repository for Clerk authentication)
+*   **Vectordbbench** (Benchmark for vector databases.)
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...and any other site you add via `cli.py add`!*

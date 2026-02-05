@@ -99,6 +99,10 @@ DEFAULT_SITES = {
     "javascript": {
         "url": "https://clerk.com",
         "description": "Official JavaScript repository for Clerk authentication"
+    },
+    "vectordbbench": {
+        "url": "https://zilliz.com/vector-database-benchmark-tool",
+        "description": "Benchmark for vector databases."
     }
 } # END_DEFAULT_SITES
 

@@ -148,6 +148,7 @@ python3 cli.py add supabase https://supabase.com/docs --desc "Supabase Docs"
 *   **Zitadel** (ZITADEL - Identity infrastructure, simplified for you.)
 *   **Opal** (Policy and data administration, distribution, and real-time )
 *   **Javascript** (Official JavaScript repository for Clerk authentication)
+*   **Vectordbbench** (Benchmark for vector databases.)
 <!-- AUTO-GENERATED-SITES:END -->
 
 *...以及任何你通过 `cli.py add` 添加的站点！*
