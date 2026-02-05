@@ -115,8 +115,9 @@ def verify_site_chat(url):
 
 def update_registry_file(new_site):
     with registry_lock: # 加锁保护文件写入
-        file_path = Path("inkeep_core/registry.py")
-        with open(file_path, 'r') as f: content = f.read()
+        # 1. 更新 Python Registry
+        py_file = Path("inkeep_core/registry.py")
+        with open(py_file, 'r') as f: content = f.read()
         alias, url, desc = new_site['alias'], new_site['url'], new_site['desc']
         if f'"{alias}"' in content: return
         tag = "} # END_DEFAULT_SITES"
@@ -126,8 +127,23 @@ def update_registry_file(new_site):
             suffix = content[tag_index:]
             if not prefix.endswith(","): prefix += ","
             entry = f'\n    "{alias}": {{\n        "url": "{url}",\n        "description": "{desc}"\n    }}'
-            with open(file_path, 'w') as f: f.write(prefix + entry + "\n" + suffix)
-            print(f"🎉 Code Updated: Added {alias}", flush=True)
+            with open(py_file, 'w') as f: f.write(prefix + entry + "\n" + suffix)
+            print(f"🎉 Python Code Updated: Added {alias}", flush=True)
+
+        # 2. 更新 TypeScript Registry (Web)
+        ts_file = Path("web/src/lib/inkeep/registry.ts")
+        if ts_file.exists():
+            with open(ts_file, 'r') as f: ts_content = f.read()
+            if f'"{alias}"' not in ts_content:
+                ts_tag = "};"
+                ts_tag_index = ts_content.rfind(ts_tag)
+                if ts_tag_index != -1:
+                    ts_prefix = ts_content[:ts_tag_index].rstrip()
+                    ts_suffix = ts_content[ts_tag_index:]
+                    if not ts_prefix.endswith(","): ts_prefix += ","
+                    ts_entry = f'\n  "{alias}": {{\n    url: "{url}",\n    description: "{desc}"\n  }}'
+                    with open(ts_file, 'w') as f: f.write(ts_prefix + ts_entry + "\n" + ts_suffix)
+                    print(f"🌐 Web Code Updated: Added {alias}", flush=True)
 
 def update_readmes():
     with registry_lock: # 加锁保护文档更新
